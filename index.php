@@ -58,13 +58,16 @@ class HookProfilerPlugin {
 			if($demo)
 				add_filter( 'show_admin_bar', '__return_true' );
 
+			// we now set this with JS
+			/*
 			if(defined( 'HOOK_PROFILER_MU' )) {
 				// set the secret cookie if missing
 				$secretCookie =  \WPHookProfiler\HookProfiler::getSecret( 'cookie' );
 				if ( empty( $_COOKIE[ $secretCookie ] ) ) {
-					setcookie( $secretCookie, 1 );
+					//setcookie( $secretCookie, 1 );
 				}
 			}
+			*/
 
 			if ( ! empty( $_GET['hprof-sleep-test'] ) || ( defined( 'HOOK_PROFILER_MU' ) && \WPHookProfiler\ProfilerSettings::$default->testSleep ) ) {
 				WPHookProfiler\Test::addSleepTest();

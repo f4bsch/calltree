@@ -78,18 +78,21 @@ class ProfileOutputHTML {
 				?>
             </div>
 
+	        <?php
+
+	        $haveProfile = ( count( $profiler->hookFuncMapCalls ) > 0 );
+
+	        if ( ! $haveProfile ) {
+		        echo "<div style='width: auto;      text-align: center;   padding: 5em; color:black;    background: bisque;'>";
+		        $secretCookie = HookProfiler::getSecret( 'cookie' );
+		        echo empty( $_COOKIE[ $secretCookie ] ) ? self::cookieText() : "nothing captured, check profiler settings";
+		        echo "</div>";
+	        }
+	        ?>
+
             <h4 class='hprof-section'>Report</h4>
             <div class="hprof-flex">
 				<?php
-
-				$haveProfile = ( count( $profiler->hookFuncMapCalls ) > 0 );
-
-				if ( ! $haveProfile ) {
-					echo "<div style='width: 100%;      text-align: center;    line-height: 10em; color:black;    background: bisque;'>";
-					$secretCookie = HookProfiler::getSecret( 'cookie' );
-					echo empty( $_COOKIE[ $secretCookie ] ) ? self::cookieText() : "nothing captured, check profiler settings";
-					echo "</div>";
-				}
 
 				Reports\RequestCommon::render( $profiler );
 
@@ -231,6 +234,7 @@ class ProfileOutputHTML {
                 let top = (window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0);
                 ls.children[0].style.top = Math.max(120, top - ls.offsetTop + window.innerHeight / 2) + 'px';
                 ls.children[0].style.left = (window.innerWidth / 2) + 'px';
+                ls.children[0].style.display = 'block';
             }, 10);
         </script>
 
@@ -313,6 +317,10 @@ class ProfileOutputHTML {
                 /* opacity: 0.8; */
                 margin: 0;
                 text-align: center;
+            }
+
+            #hook-prof-html p a, #hook-prof-html ul a  {
+                text-decoration: underline !important;
             }
 
             #hook-prof-html div.hprof-table-wrap {
@@ -520,6 +528,7 @@ class ProfileOutputHTML {
                 margin-left: -60px;
                 margin-top: -60px;
                 animation: hprof-spin 2s linear infinite;
+                display: none;
             }
 
             @keyframes hprof-spin {
@@ -1561,11 +1570,34 @@ class ProfileOutputHTML {
 
 
 	static function cookieText() {
+		$secretCookie = HookProfiler::getSecret( 'cookie' );
 		?>
-        Calltree loaded the profiler but it did not capture anything. Due to high intrusion into the WordPress Plugin API, it is disabled by default. Before using it please consider:
-        * The profiler in its current state has an overhead of 10 to 40 % (depending on the active plugins), so it can slow down your site. Relative times are still
-        * The profiler completely overrides the Plugin API, and in some rare situations this can cause trouble. To prevent data loss, we built in a safe mode that permanently
-        but not active
+        <div style="text-align: left; max-width: 60em;    margin: auto;">
+        <p>
+            Calltree loaded the Profiler but it did not capture anything yet. The Report you'll find below only includes some general data.
+            Due to high intrusion into the WordPress Plugin API the Profiler is disabled by default.
+            It will only profile with a trigger cookie set. Before using it please consider:
+        </p>
+
+        <ul style="    margin-left: 2em;     list-style: circle;">
+            <li>The profiler in its current state has an overhead of 10 to 40 % (depending on the active plugins), so it can slow down your site.
+                You should interpret any absolute time value with care, as they may be very different without the profiler hooked in. Relative times are reliable though.
+            </li>
+            <li>The profiler completely overrides the Plugin API, and in some rare situations this can cause trouble.
+                To prevent data loss, we built in a trouble detection, that will disable the Profiler if something goes wrong.
+                Some plugins might trigger this protection when they stop script execution at uncommon spots (such as custom AJAX endpoints).
+                You can re-enable profiling in the settings &#x2699;.
+            </li>
+            <li>
+                Please add this bookmarklet to your bookmarks bar: <a style="cursor: move;" class="" onclick="return false;" href='javascript:(document.cookie="hprof_disable=1;path=/")&&document.location.reload();'><span>Disable Profiler</span></a>
+                This will clear the trigger cookie and disable the profiler in case you can't access your Dashboard anymore.
+            </li>
+        </ul>
+            <p>
+                <b>After you read the above, <a href='javascript:(document.cookie="<?php echo $secretCookie; ?>=1;path=/")&&document.location.reload();'>click here</a> to set the trigger cookie, enable the Profiler (only for your WordPress Account) and reload the page.</b>
+            </p>
+        </div>
+
 		<?php
 	}
 }

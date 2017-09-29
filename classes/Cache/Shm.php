@@ -2,7 +2,6 @@
 
 namespace WPHookProfiler\Cache;
 
-
 class Shm {
 	private $shm;
 

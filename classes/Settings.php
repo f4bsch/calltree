@@ -40,23 +40,26 @@ class Settings {
                 var action = '<?php echo esc_js( self::AJAX_ACTION ); ?>';
                 var settings = {};
 
-                var createInp = function (name, value) {
+                var debounce = false;
 
-                };
 
                 var saving = 0;
                 var saveSettings = function () {
-                    console.log('saveSettings', 'saving', saving, settings);
-
-                    var wrap = document.getElementById('hook-prof-settings-wrap');
-                    if (saving === 0)
-                        wrap.classList.add('wait');
-                    saving++;
-                    jQuery.post(ajaxurl, {'action': action, 'set': settings}, function () {
-                        saving--;
+                    if(debounce !== false) {
+                        clearTimeout(debounce);
+                    }
+                    debounce = setTimeout(function() {
+                        var wrap = document.getElementById('hook-prof-settings-wrap');
                         if (saving === 0)
-                            wrap.classList.remove('wait');
-                    });
+                            wrap.classList.add('wait');
+                        saving++;
+                        jQuery.post(ajaxurl, {'action': action, 'set': settings}, function () {
+                            saving--;
+                            if (saving === 0)
+                                wrap.classList.remove('wait');
+                        });
+                        debounce = false;
+                    }, 400);
                 };
 
                 hprof.loadSettingsGUI = function() {
@@ -73,7 +76,6 @@ class Settings {
                                 if (!inp.dataset.setup) {
                                     inp.dataset.setup = 1;
                                     inp.addEventListener('change', function (e) {
-                                        console.log('save',e);
                                         settings[this.name] = this.checked;
                                         saveSettings();
                                     });
@@ -82,7 +84,6 @@ class Settings {
                                         inp.disabled = !settings[depKey];
                                         var dependsOn = wrap.querySelectorAll("input[name='" + depKey + "']")[0];
                                         dependsOn.addEventListener('change', (function (inp, e) {
-                                            console.log(e);
                                             inp.disabled = !settings[this.name] || this.disabled;
                                             //inp.checked = inp.checked &&  !inp.disabled;
                                             inp.dispatchEvent(new Event('change'));

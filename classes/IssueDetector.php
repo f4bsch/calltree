@@ -106,6 +106,9 @@ class IssueDetector {
 
 		// iterate over all functions
 		foreach ( $profiler->hookFuncMapTimeIncl as $hookHashtagFunc => $timeMs ) {
+			$timeIncl = $timeMs;
+			$timeSelf = $profiler->hookFuncMapFuncTimeSelf[$hookHashtagFunc];
+
 			if ( $timeMs > 8 ) {
 
 				// find plugins loaded issues
@@ -165,9 +168,9 @@ class IssueDetector {
 
 				if ( $hook === 'wp_footer' && $func === 'wp_admin_bar_render' ) {
 					$issue = new Issue( '	wpcore/admin-bar', $func, Issue::CategoryMisc );
-					$issue->setDescription( sprintf( __( 'Rendering the admin bar menu takes too long', 'hook-prof' )
+					$issue->setDescription( sprintf( __( 'Rendering the Toolbar (Admin bar menu) takes too long', 'hook-prof' )
 					) );
-					$issue->setHowToSolve( sprintf( __( 'Unknown', 'hook-prof' ) ) );
+					$issue->setHowToSolve( sprintf( __( 'Install %s', 'hook-prof' ), '<a href="https://calltr.ee/toolbar-cached/">Toolbar Cached</a>' ) );
 					$issue->setSlowDownPerRequest( $timeMs );
 					$issue->setDevNote( 'cache what you generate for the admin_bar_menu' );
 
@@ -180,20 +183,27 @@ class IssueDetector {
 
 			// find filters, shortodes that are slow
 			$called = ( strncmp( $hookHashtagFunc, 'autoload#', 9 ) !== 0 ) ? $profiler->hookFuncMapCalls[ $hookHashtagFunc ] : 0;
-			if ( ( $called > 10 && $timeMs > 120 ) || ( $called > 200 && $timeMs > 40 ) || ( $called > 300 && $timeMs > 25 ) ) {
+			// if the filter was was only fired a couple of times, take the inclusive time
+			$filterTime = $called < 10 ? $timeIncl : $timeSelf;
+			// ( $called > 10 && $timeMs > 120 ) || ( $called > 200 && $timeSelf > 40 ) || ( $called > 300 && $timeMs > 25 )
+			if ( $filterTime > 25 ) {
 				list( $hook, $func ) = explode( '#', $hookHashtagFunc );
 				$component = $profiler->getPluginByFunction( $func );
-				$issue     = new Issue( $component, $func, Issue::CategoryPluginFilters );
-				$issue->setDescription( sprintf( __( 'Component `%s` applies slow filter on hook `%s`, which was fired %d times', 'hook-prof' ),
-					self::compLink( $component ), $hook, $called ) );
-				$issue->setHowToSolve( sprintf( __( 'Ask the developer of `%s` to fix this', 'hook-prof' ), self::compLink( $component ) ) . sprintf( $pluginCondDisabler, self::compLink( $component ) ) );
-				$issue->setSlowDownPerRequest( $timeMs );
+				// dont blame our plugin loader!
+				if($hook !== 'plugins_loaded' && ($hook !== 'option_active_plugins' || $component != 'muplug/hook-profiler')) {
+					$issue     = new Issue( $component, $func, Issue::CategoryPluginFilters );
+					$issue->setDescription( sprintf( __( 'Component `%s` applies slow filter on hook `%s`, which was fired %d times', 'hook-prof' ),
+						self::compLink( $component ), $hook, $called ) );
+					$issue->setHowToSolve( sprintf( __( 'Ask the developer of `%s` to fix this', 'hook-prof' ), self::compLink( $component ) ) . sprintf( $pluginCondDisabler, self::compLink( $component ) ) );
+					$issue->setSlowDownPerRequest( $filterTime );
 
-				$issue->setDevNote( 'if you filters depends on a condition, wrap the `add_filter()` with it' );
+					$issue->setDevNote( 'if you filters depends on a condition, wrap the `add_filter()` with it' );
 
-				$issues[] = $issue;
+					$issues[] = $issue;
+				}
 			}
 		}
+
 
 
 		// iterate over all plugins
@@ -456,7 +466,7 @@ WC_Helper_Updater::transient_update_plugins	pre_set_site_transient_update_plugin
 				$issue->setDescription( sprintf( __( 'OPCache is full or almost full. This may cause spikes in server response time.', 'hook-prof' ) ) );
 				$issue->setHowToSolve( sprintf( __( 'Increase OPCache memory' ) ) );
 				$issue->setSlowDownPerRequest( 100 );
-				$issue->setDevNote( 'increase `opcache.memory_consumption` in `php.ini`' );
+				$issue->setDevNote( 'increase `opcache.memory_consumption` and `opcache.max_accelerated_files` in `php.ini`' );
 
 				$issues[] = $issue;
 			}
