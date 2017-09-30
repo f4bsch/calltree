@@ -4,7 +4,7 @@
 namespace WPHookProfiler\SystemTest;
 
 
-class ConstantNotDefinedException extends Exception {
+class ConstantNotDefinedException extends SystemTestException {
  function __construct( $constant ) {
 	 parent::__construct( "Undefined constant $constant" );
  }

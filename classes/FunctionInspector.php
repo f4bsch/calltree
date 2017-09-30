@@ -28,6 +28,7 @@ class FunctionInspector {
 			//$plugin = rawurlencode( $plugin );
 
 
+			$line = intval($line);
 			$lineHeight = 17.35;
 			$scrollto   = round( $line * $lineHeight );
 

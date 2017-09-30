@@ -12,7 +12,7 @@ class RequestCommon {
 	/**
 	 * @param HookProfiler $profiler
 	 */
-	static function render($profiler) {
+	static function render( $profiler ) {
 		$desc = <<<DESC
 
 General page request info.<br>
@@ -41,26 +41,50 @@ DESC;
 		$activePluginsHash = HookProfiler::getActivePluginsHash();
 
 
+		$opcLv = $profiler->disabledOPCache ? '*OFF' : ( @ini_get( 'opcache.enable' ) ? @ini_get( 'opcache.optimization_level' ) : 'OFF' );
+
+		if(function_exists('opcache_reset') && $profiler->disabledOPCache)
+			opcache_reset();
+
 		$requestRows = [
 			'request group'  => $profiler->getCurrentRequestGroup(),
 			'active plugins' => [ count( $activePlugins ), "%7d" ],
 			'plugins hash'   => [ $activePluginsHash, "%xd" ],
 
 
-			'included files'   => [ count( get_included_files() ), "%7d" ],
-			'inc. files size'  => [
+			'included files'  => [ count( get_included_files() ), "%7d" ],
+			'inc. files size' => [
 				array_sum( FileStatsCache::getSizes( $includedFiles ) ) / 1014 / 1024,
 				'%7.1f MiB'
 			],
-			'PHP version'    => strtok(PHP_VERSION, '+'),
-			'opcache_level'    => @ini_get( 'opcache.enable' ) ? @ini_get( 'opcache.optimization_level' ) : 'OFF',
+			'PHP version'     => strtok( PHP_VERSION, '+' ),
+
 			'autoloader calls' => [ $profiler->autoloaderCalls, "%7d" ],
 			'hook fires'       => [ $profiler->getNumCapturedFires(), "%7d" ],
 			'func calls'       => [ $profiler->getNumCapturedCalls(), "%7d" ],
-			'MEM'              => [ memory_get_usage(false) / 1014 / 1024, '%7.1f MiB' ],
+			'MEM'              => [ memory_get_usage( false ) / 1014 / 1024, '%7.1f MiB' ],
 			'MEM_peak'         => [ memory_get_peak_usage() / 1014 / 1024, '%7.1f MiB' ],
 
+			'opcache_level' => $opcLv,
 		];
+
+		if ( function_exists( 'opcache_get_status' ) ) {
+
+
+			$opcStat  = opcache_get_status( false );
+			$opcMem   = $opcStat['memory_usage'];
+			$opcStats = $opcStat['opcache_statistics'];
+
+			$opcacheMemTotal = $opcMem['free_memory'] + $opcMem['used_memory'];
+			$opcacheMemUsage = $opcMem['used_memory'] / $opcacheMemTotal;
+
+			$opcKeys         =  $opcStats["num_cached_keys"]; // $opcStats["num_cached_scripts"] +
+			$opcacheKeyUsage = $opcKeys / $opcStats["max_cached_keys"];
+
+			$requestRows['opcache_mem'] = [ round($opcacheMemUsage * 100), "%7.0f %%" ];
+			$requestRows['opcache_files'] = [ round($opcacheKeyUsage * 100), "%7.0f %%" ];
+		}
+
 
 				if ( ProfilerSettings::$default->profileObjectCache ) {
 			$misses                        = array_sum( $profiler->cacheKeyMapMiss );
@@ -73,11 +97,11 @@ DESC;
 			];
 		}
 
-		$requestRows['T_wpIncludes'] =  [ $profiler->getWPIncTime(), "%7.2f ms" ];
+		$requestRows['T_wpIncludes'] = [ $profiler->getWPIncTime(), "%7.2f ms" ];
 
 		$requestRows += [
 			'T_total'        => [ $requestTime, "%7.2f ms" ],
-			'T_hooks'      => [ $hookTime, "%7.2f ms" ],
+			'T_hooks'        => [ $hookTime, "%7.2f ms" ],
 			'T_recovered'    => [ $recoveredTime, "%7.2f ms" ],
 			'T_unclassified' => [ $unclassifiedTime, "%7.2f ms" ],
 			//'T_request - T_hooks'             => [ $requestTime - $hookTime, "%6.2f ms" ],

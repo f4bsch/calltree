@@ -24,14 +24,7 @@ class Admin {
 			'meta'  => array( 'onclick' => 'hprof.scrollIntoView(event)' )
 		) );
 
-				$wp_admin_bar->add_menu( array(
-			'id'    => 'hprof-site-benchmarks',
-			'parent' => 'hprof',
-			'title' => 'Site Benchmarks',
-			'href'  => '#site-benchmarks',
-			'meta'  => array( 'onclick' => 'hprof.benchmarks.showModal(event)' )
-		) );
-	}
+			}
 
 }
 

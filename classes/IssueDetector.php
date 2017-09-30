@@ -192,8 +192,8 @@ class IssueDetector {
 				// dont blame our plugin loader!
 				if($hook !== 'plugins_loaded' && ($hook !== 'option_active_plugins' || $component != 'muplug/hook-profiler')) {
 					$issue     = new Issue( $component, $func, Issue::CategoryPluginFilters );
-					$issue->setDescription( sprintf( __( 'Component `%s` applies slow filter on hook `%s`, which was fired %d times', 'hook-prof' ),
-						self::compLink( $component ), $hook, $called ) );
+					$issue->setDescription( sprintf( __( 'Component `%s` applies slow filter on hook `%s` with function `%s`, which was called %d times', 'hook-prof' ),
+						self::compLink( $component ), $hook, self::funcLink($func), $called ) );
 					$issue->setHowToSolve( sprintf( __( 'Ask the developer of `%s` to fix this', 'hook-prof' ), self::compLink( $component ) ) . sprintf( $pluginCondDisabler, self::compLink( $component ) ) );
 					$issue->setSlowDownPerRequest( $filterTime );
 

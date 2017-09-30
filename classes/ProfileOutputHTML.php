@@ -86,6 +86,9 @@ class ProfileOutputHTML {
 		        echo "<div style='width: auto;      text-align: center;   padding: 5em; color:black;    background: bisque;'>";
 		        $secretCookie = HookProfiler::getSecret( 'cookie' );
 		        echo empty( $_COOKIE[ $secretCookie ] ) ? self::cookieText() : "nothing captured, check profiler settings";
+		        if(!empty(ProfilerSettings::$default->lastDisableAllMsg)) {
+		            echo "<br>Last message: ".ProfilerSettings::$default->lastDisableAllMsg;
+                }
 		        echo "</div>";
 	        }
 	        ?>
@@ -184,6 +187,7 @@ class ProfileOutputHTML {
 					IssueDisplay::listIssues( $issues, $profiler->getWPIncTime(), $profiler->getTotalRunTime() );
 				} catch ( \Exception $e ) {
 					echo "<p>Issue detector exception:" . $e->getMessage() . "</p>";
+					HookProfiler::logMsg("Issue Detector error: ". json_encode($e));
 				}
 				echo "</div>";
 
@@ -218,6 +222,9 @@ class ProfileOutputHTML {
 			}
 
 			//print_r(SystemStats::get());
+
+            global $wp_object_cache;
+            print_r($wp_object_cache->non_persistent_groups);
 
 			echo "</pre>";
 			?>
@@ -257,10 +264,8 @@ class ProfileOutputHTML {
               href="<?php echo esc_attr( add_query_arg( 'hprof_html_import', 1 ) ); ?>">
 
 
-        <!--
-        <link rel="import" id="hprofDashboardImport"
-              href="<?php echo esc_attr( \HookProfilerPlugin::url( 'components/site-benchmarks.html' ) ); ?>">
--->
+
+        <link rel="import"  href="<?php echo esc_attr( \HookProfilerPlugin::url( 'components/site-benchmarks.html' ) ); ?>">
 
 		<?php
 
@@ -577,7 +582,6 @@ class ProfileOutputHTML {
 	public static function js_warn_suppress_never_call() {
 		?>
         <script>
-            hprofTTLBBenchmark();
             hprofScrollIntoView();
             hprofCsv();
             hprofMakeItADataTable();
@@ -1244,7 +1248,8 @@ class ProfileOutputHTML {
 
 		$res = ( $typeAndScale[0] == 'string' )
 			? [ $data, "%s" ] // add zero space to allow line break
-			: [ $data * $typeAndScale[1], self::$formatting[ $typeAndScale[0] ] ];
+			: [ ($data === '' ? 0 : $data) * $typeAndScale[1], self::$formatting[ $typeAndScale[0] ] ];
+
 
 		self::sw()->measure( 'formatByType' );
 

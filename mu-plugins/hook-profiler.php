@@ -14,7 +14,6 @@ namespace {
 
 namespace WPHookProfiler {
 
-
 	function main_mu() {
 		ProfilerSettings::loadDefault();
 
@@ -50,6 +49,9 @@ namespace WPHookProfiler {
 		$hookProf = new HookProfiler( false );
 
 		if ( $enable_profiling ) {
+			if ( ProfilerSettings::$default->opcacheDisable ) {
+				$hookProf->disableOPCache();
+			}
 
 			// during a benchmark we still profile hooks
 			// you can override this by setting $_REQUEST['hprof-disable-hooks']
@@ -58,8 +60,8 @@ namespace WPHookProfiler {
 				ProfilerSettings::$default->profileHooks = true;
 
 				// self-profiling
-				require_once WP_PLUGIN_DIR . '/hook-prof/classes/Stopwatch.php';
-				Stopwatch::registerSwFunc();
+				//require_once WP_PLUGIN_DIR . '/hook-prof/classes/Stopwatch.php';
+				//Stopwatch::registerSwFunc();
 
 				$hookProf->enableBenchmarkMode();
 			}
@@ -135,12 +137,16 @@ namespace WPHookProfiler {
 		public $advancedReport = false;
 		public $hookLog = false;
 		public $hookLogExcludeCommonFilters = true;
+		public $adminBarDisplayTimes = false;
+
 
 		// debug
 		public $showOutOfStackFrames = false;
 		public $testSleep = false;
+		public $lastDisableAllMsg = '';
 
-		public $adminBarDisplayTimes = false;
+		// misc
+		public $opcacheDisable = false;
 
 		/**
 		 * @var ProfilerSettings
@@ -151,12 +157,15 @@ namespace WPHookProfiler {
 			self::$default = new ProfilerSettings();
 			$sets          = get_option( 'hook_profiler_settings' );
 			if ( ! empty( $sets ) ) {
-				error_log('loaded'.$_SERVER['REQUEST_URI'].json_encode($sets)); // todo debug
 				self::$default->update( $sets, true );
 			}
 		}
 
-		public function disableAll() {
+		public function disableAll( $msg = '' ) {
+			if ( ! empty( $msg ) ) {
+				$this->lastDisableAllMsg = $msg;
+			}
+
 			$this->profileHooks                 = false;
 			$this->profilePluginMainFileInclude = false;
 			$this->profileDb                    = false;
@@ -191,7 +200,6 @@ namespace WPHookProfiler {
 		}
 
 		public function save() {
-			error_log('saving'.$_SERVER['REQUEST_URI']);// todo debug
 			$res = update_option( 'hook_profiler_settings', (array) $this );
 			HookProfiler::logMsg( 'saved settings (result=' . $res . ') @' . $_SERVER['REQUEST_URI'] . json_encode( $_POST ) . ' ' . json_encode( $this ) );
 
@@ -339,7 +347,7 @@ namespace WPHookProfiler {
 			}
 			$destructed = true;
 
-			$caughtError = self::isWarningOrError( error_get_last() );
+			$caughtError = self::isError( error_get_last() );
 
 			// non-empy stack at shutdown means that something exited in a hook callback
 			if ( ! empty( WP_Hook_Profiled::$hookStack ) ) {
@@ -370,7 +378,7 @@ namespace WPHookProfiler {
 				$this->corruptedStack          = WP_Hook_Profiled::$hookStack;
 			}
 
-			if ( $this->detectedStackCorruption || $caughtError ) {
+			if ( $this->detectedStackCorruption ) {
 				if ( $this->itIsSafeToAppendHtml() ) {
 					echo "\n<!-- Hook Profiler detected a hook stack corruption and will discard all collected data! The stack was:\n";
 					var_dump( $this->corruptedStack );
@@ -381,12 +389,28 @@ namespace WPHookProfiler {
 				if ( ! $this->benchmarkMode ) {
 					$this->emergencyDisable( "Detected hook stack corruption at shutdown, auto-disabled!" );
 				} else {
-					$this->logMsg( 'Detected hook stack corruption during benchmark: ' . print_r( $this->corruptedStack, true ) );
+					$this->logMsg( 'Detected hook stack corruption during benchmark: ' . print_r( $this->corruptedStack, true ), true );
 				}
 
 				return;
 			}
 
+			if ( $caughtError ) {
+				if ( $this->itIsSafeToAppendHtml() ) {
+					echo "\n<!-- Hook Profiler caught an error:\n";
+					var_dump( $caughtError );
+					echo " -->";
+				}
+
+				// auto disable on error
+				if ( ! $this->benchmarkMode ) {
+					$this->emergencyDisable( "Caught error, auto-disabled!" );
+				} else {
+					$this->logMsg( 'Caught error during benchmark: ' . print_r( $caughtError, true ), true );
+				}
+
+				return;
+			}
 
 			$this->totalTimeRequest = ( microtime( true ) - $this->requestTime ) * 1000;
 
@@ -451,8 +475,6 @@ namespace WPHookProfiler {
 		}
 
 		public function emergencyDisable( $msg = "", $logBacktrace = false ) {
-			ProfilerSettings::$default->disableAll();
-			ProfilerSettings::$default->save();
 
 			$group = self::getCurrentRequestGroup();
 			$msg   .= " @request {$_SERVER['REQUEST_URI']},$group.  Hook Stack was: " . print_r( $this->corruptedStack, true );
@@ -461,11 +483,14 @@ namespace WPHookProfiler {
 			}
 			$msg .= " Last error: " . print_r( error_get_last(), true );
 
+			ProfilerSettings::$default->disableAll( $msg );
+			ProfilerSettings::$default->save();
+
 			$this->logMsg( $msg );
 		}
 
-		public static function isWarningOrError( $warn ) {
-			return ( is_array( $warn ) && isset( $warn['type'] ) && ( $warn['type'] === E_WARNING || $warn['type'] === E_ERROR || $warn['type'] === E_PARSE ) );
+		public static function isError( $err ) {
+			return ( is_array( $err ) && isset( $warn['type'] ) && ( $warn['type'] === E_ERROR || $warn['type'] === E_PARSE || $warn['type'] === E_USER_ERROR ) ) ? $err : false;
 		}
 
 
@@ -509,6 +534,10 @@ namespace WPHookProfiler {
 		static function add( &$arr, $key, $val ) {
 			isset( $arr[ $key ] ) ? ( $arr[ $key ] += $val ) : ( $arr[ $key ] = $val );
 			//@$arr[ $key ] += $val;
+		}
+
+		static function max( &$arr, $key, $val ) {
+			isset( $arr[ $key ] ) ? ( ( $val > $arr[ $key ] ) ? $arr[ $key ] = $val : 0/*void*/ ) : ( $arr[ $key ] = $val );
 		}
 
 		/**
@@ -638,7 +667,11 @@ namespace WPHookProfiler {
 		public $dbFuncTagMapTime = array();
 		public $dbFuncTagMapQueries = array();
 
-						/**
+				public $cacheFuncTagMapTime = array();
+		public $cacheFuncTagMapCalls = array();
+		public $cacheFuncTagMapTimeMax = array();
+
+				/**
 		 * @param string $objectTag
 		 * @param callable $func
 		 * @param array $args
@@ -885,7 +918,7 @@ namespace WPHookProfiler {
 		}
 
 
-		static function logMsg( $str ) {
+		static function logMsg( $str, $passToDefaultLog = false ) {
 			static $logFile = '';
 			if ( ! $logFile ) {
 				$suffix  = self::getSecret( 'log' );
@@ -898,7 +931,9 @@ namespace WPHookProfiler {
 
 			$msg = date( 'c' ) . ': ' . $str . "\n";
 			error_log( $msg, 3, $logFile );
-			error_log( $msg ); // also log to default log
+			if ( $passToDefaultLog ) {
+				error_log( $msg );
+			}
 		}
 
 		private $replacedPluginLoader = false;
@@ -954,8 +989,8 @@ namespace WPHookProfiler {
 
 
 				// dont blame the option hook
-				@$this->hookMapTimeIncl['site_option_active_sitewide_plugins'] -= ( microtime( true ) - $start ) * 1000;
-				// todo:
+				self::add( $this->hookMapTimeIncl, 'site_option_active_sitewide_plugins', - ( microtime( true ) - $start ) * 1000 );
+
 				//@$this->hookFuncMapTimeInclMapTimeIncl['site_option_active_sitewide_plugins'] -= ( microtime( true ) - $start ) * 1000;
 
 
@@ -1124,7 +1159,33 @@ namespace WPHookProfiler {
 			$this->benchmarkMode = true;
 		}
 
-				public $detectedWrongCacheImpl = false;
+				public $disabledOPCache = false;
+
+		public function disableOPCache() {
+			if ( ! function_exists( 'opcache_reset' ) ) {
+				return false;
+			}
+
+			if($this->disabledOPCache)
+				return true;
+
+			@ini_set( 'opcache.enable', 'Off' );
+			@ini_set( 'opcache.optimization_level', '0x0');
+
+			register_shutdown_function( function () {
+				register_shutdown_function( function () {
+					opcache_reset();
+				} );
+			} );
+
+			$this->disabledOPCache = opcache_reset();
+
+			$this->disabledOPCache =  true;
+
+			return $this->disabledOPCache;
+		}
+
+		public $detectedWrongCacheImpl = false;
 
 				public $profileMem = false;
 
@@ -1334,7 +1395,7 @@ namespace WPHookProfiler {
 				}
 			}
 
-			/** @var \ReflectionFunctionAbstract $rf */
+			/** @var \Reflector $rf */
 			$rf = null;
 
 			if ( is_string( $func ) && strpos( $func, '::' ) !== false ) {
@@ -1346,8 +1407,26 @@ namespace WPHookProfiler {
 				if ( $p !== false ) {
 					$func[1] = substr( $func[1], 0, $p );
 				}
-				$rf = new \ReflectionMethod ( is_object( $func[0] ) ? get_class( $func[0] ) : $func[0], $func[1] );
+
+				$class = is_object( $func[0] ) ? get_class( $func[0] ) : $func[0];
+
+				try {
+					$rf = new \ReflectionMethod ( $class, $func[1] );
+				} catch ( \Exception $e ) {
+					try {
+						// may fail due to virtual method (`__call`)
+						$rf = new \ReflectionMethod ( $class, '__call' );
+					} catch ( \Exception $e2 ) {
+						// fallback to class declaration
+						$rf = new \ReflectionClass( $class );
+					}
+				}
 			} else {
+				if(!function_exists($func)) {
+					$line = 0;
+					return '';
+				}
+
 				$rf = new \ReflectionFunction( $func );
 			}
 
@@ -1835,8 +1914,9 @@ namespace WPHookProfiler {
 		) {
 			if ( ! isset( $this->funcMapComponent[ $key ] ) ) {
 				$knt                            = self::rmTag( $key );
-				$fn                             = $this->getFunctionFileName( $this->funcs[ $knt ] );
-				$this->funcMapComponent[ $knt ] = self::getComponentByFileName( $fn );
+				$this->funcMapComponent[ $knt ] = isset( $this->funcs[ $knt ] ) ?
+					self::getComponentByFileName( $this->getFunctionFileName( $this->funcs[ $knt ] ) )
+					: '';
 				if ( $key !== $knt ) {
 					// redundant cache storage, this time with the tag
 					$this->funcMapComponent[ $key ] = $this->funcMapComponent[ $knt ];
@@ -2373,7 +2453,7 @@ namespace WPHookProfiler {
 			$t   = microtime( true );
 			$res = @call_user_func_array( $func, $arguments );
 
-			if ( HookProfiler::isWarningOrError( error_get_last() ) ) {
+			if ( HookProfiler::isError( error_get_last() ) ) {
 				$this->profileCollector->emergencyDisable( "Error at ObjectMethodProfiler", true );
 			}
 

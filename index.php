@@ -27,9 +27,6 @@ class HookProfilerPlugin {
 			add_action( 'admin_notices', array( 'WPHookProfiler\Admin', 'noticeMissingMUP' ) );
 		}
 
-		if( defined('HPROF_EXPERIMENTAL'))
-			\WPHookProfiler\Setup::updateMUP();
-
 
 		add_action( 'init', array( __CLASS__, 'init' ) );
 
@@ -51,6 +48,9 @@ class HookProfilerPlugin {
 	}
 
 	static function init() {
+		if( defined('HPROF_EXPERIMENTAL') && is_user_logged_in())
+			\WPHookProfiler\Setup::updateMUP();
+
 
 		add_action( 'hook_prof_end', array( 'WPHookProfiler\SystemStats', 'add' ) );
 

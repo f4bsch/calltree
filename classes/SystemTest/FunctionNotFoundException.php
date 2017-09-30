@@ -3,7 +3,7 @@
 namespace WPHookProfiler\SystemTest;
 
 
-class FunctionNotFoundException extends Exception {
+class FunctionNotFoundException extends SystemTestException {
  function __construct( $msg ) {
 	 parent::__construct( $msg );
  }

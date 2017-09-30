@@ -71,8 +71,8 @@ class Settings {
 
                         var wrap = document.getElementById('hook-prof-settings-wrap');
                         for (var key in settings) {
-                            var inp = wrap.querySelectorAll("input[name='" + key + "']")[0] || createInp(key, settings[key]);
-                            if (inp.type === 'checkbox') {
+                            var inp = wrap.querySelectorAll("input[name='" + key + "']")[0] || false; //createInp(key, settings[key]);
+                            if (inp && inp.type === 'checkbox') {
                                 if (!inp.dataset.setup) {
                                     inp.dataset.setup = 1;
                                     inp.addEventListener('change', function (e) {
@@ -222,6 +222,8 @@ class Settings {
                             Display TTFB, TSRV, TTLB in Admin Bar
                         </label>
                     </p>
+
+
                 </div>
 
 
@@ -235,6 +237,12 @@ class Settings {
                     </p>
                     <p><label><input type="checkbox" name="testSleep" value="1" data-dependsOn="profileHooks"> Add test
                             sleeps</label>
+                    </p>
+
+
+                    <p><label><input type="checkbox" name="opcacheDisable" value="1">
+                            Disable PHP OPCache
+                        </label>
                     </p>
                 </div>
             </div>
