@@ -183,23 +183,25 @@ class IssueDetector {
 
 			// find filters, shortodes that are slow
 			$called = ( strncmp( $hookHashtagFunc, 'autoload#', 9 ) !== 0 ) ? $profiler->hookFuncMapCalls[ $hookHashtagFunc ] : 0;
-			// if the filter was was only fired a couple of times, take the inclusive time
-			$filterTime = $called < 10 ? $timeIncl : $timeSelf;
-			// ( $called > 10 && $timeMs > 120 ) || ( $called > 200 && $timeSelf > 40 ) || ( $called > 300 && $timeMs > 25 )
-			if ( $filterTime > 25 ) {
-				list( $hook, $func ) = explode( '#', $hookHashtagFunc );
-				$component = $profiler->getPluginByFunction( $func );
-				// dont blame our plugin loader!
-				if($hook !== 'plugins_loaded' && ($hook !== 'option_active_plugins' || $component != 'muplug/hook-profiler')) {
-					$issue     = new Issue( $component, $func, Issue::CategoryPluginFilters );
-					$issue->setDescription( sprintf( __( 'Component `%s` applies slow filter on hook `%s` with function `%s`, which was called %d times', 'hook-prof' ),
-						self::compLink( $component ), $hook, self::funcLink($func), $called ) );
-					$issue->setHowToSolve( sprintf( __( 'Ask the developer of `%s` to fix this', 'hook-prof' ), self::compLink( $component ) ) . sprintf( $pluginCondDisabler, self::compLink( $component ) ) );
-					$issue->setSlowDownPerRequest( $filterTime );
+			if($called > 1) {
+				// if the filter was was only fired a couple of times, take the inclusive time
+				$filterTime = $called < 10 ? $timeIncl : $timeSelf;
+				// ( $called > 10 && $timeMs > 120 ) || ( $called > 200 && $timeSelf > 40 ) || ( $called > 300 && $timeMs > 25 )
+				if ( $filterTime > 25 ) {
+					list( $hook, $func ) = explode( '#', $hookHashtagFunc );
+					$component = $profiler->getPluginByFunction( $func );
+					// dont blame our plugin loader!
+					if ( $hook !== 'plugins_loaded' && ( $hook !== 'option_active_plugins' || $component != 'muplug/hook-profiler' ) ) {
+						$issue = new Issue( $component, $func, Issue::CategoryPluginFilters );
+						$issue->setDescription( sprintf( __( 'Component `%s` applies slow filter on hook `%s` with function `%s`, which was called %d times', 'hook-prof' ),
+							self::compLink( $component ), $hook, self::funcLink( $func ), $called ) );
+						$issue->setHowToSolve( sprintf( __( 'Ask the developer of `%s` to fix this', 'hook-prof' ), self::compLink( $component ) ) . sprintf( $pluginCondDisabler, self::compLink( $component ) ) );
+						$issue->setSlowDownPerRequest( $filterTime );
 
-					$issue->setDevNote( 'if you filters depends on a condition, wrap the `add_filter()` with it' );
+						$issue->setDevNote( 'if you filters depends on a condition, wrap the `add_filter()` with it' );
 
-					$issues[] = $issue;
+						$issues[] = $issue;
+					}
 				}
 			}
 		}

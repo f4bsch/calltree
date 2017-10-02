@@ -16,6 +16,9 @@ class SystemStats {
 	 * @param HookProfiler $profiler
 	 */
 	public static function add( $profiler ) {
+		if($profiler->isInBenchmarkMode())
+			return;
+
 		$cache = Cache::get();
 
 		$systemStats = $cache->get(self::CACHE_KEY);

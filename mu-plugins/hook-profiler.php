@@ -1,6 +1,7 @@
 <?php
 /*
 Plugin Name: Calltree Profiler
+Plugin URI: https://calltr.ee/hook-profiler/
 Description: Hooks into the WordPress API and enables a code profiler
 Author: Fabian Schlieper
 Author URI: https://calltr.ee/
@@ -68,6 +69,7 @@ namespace WPHookProfiler {
 
 
 			if ( ! empty( $_REQUEST['hprof-disable-hooks'] ) ) {
+				ProfilerSettings::$default->disableAll();
 				ProfilerSettings::$default->profileHooks = false;
 			}
 
@@ -442,7 +444,7 @@ namespace WPHookProfiler {
 
 						global $current_user;
 						$uid = $current_user ? $current_user->ID : 0;
-						echo "\n<script> var WP_USER_ID = $uid; var HPROF_SERVER_TTLB = $t; var HPROF_SERVER_TIME = $now;</script>";
+						echo "\n<script>  window. WP_USER_ID = {$uid}; window. HPROF_SERVER_TTLB = {$t}; window. HPROF_SERVER_TIME = {$now};</script>";
 						exit; // we force an exit here, sorry
 					} );
 				} );
@@ -1104,9 +1106,10 @@ namespace WPHookProfiler {
 			return $allGlobals;
 		}
 
+
 		public $componentMapLoadTime = array();
 
-		function loadPluginMainProfiled( $__plugin, $_now ) {
+		function loadPluginMainProfiled( $__plugin, /** @noinspection PhpUnusedParameterInspection */$_now ) {
 			wp_register_plugin_realpath( $__plugin );
 
 			// A priori globals registration: if a plugin set a global during include inside a function,
@@ -1159,6 +1162,10 @@ namespace WPHookProfiler {
 			$this->benchmarkMode = true;
 		}
 
+		public function isInBenchmarkMode() {
+			return $this->benchmarkMode;
+		}
+
 				public $disabledOPCache = false;
 
 		public function disableOPCache() {
@@ -1166,11 +1173,12 @@ namespace WPHookProfiler {
 				return false;
 			}
 
-			if($this->disabledOPCache)
+			if ( $this->disabledOPCache ) {
 				return true;
+			}
 
 			@ini_set( 'opcache.enable', 'Off' );
-			@ini_set( 'opcache.optimization_level', '0x0');
+			@ini_set( 'opcache.optimization_level', '0x0' );
 
 			register_shutdown_function( function () {
 				register_shutdown_function( function () {
@@ -1180,7 +1188,7 @@ namespace WPHookProfiler {
 
 			$this->disabledOPCache = opcache_reset();
 
-			$this->disabledOPCache =  true;
+			$this->disabledOPCache = true;
 
 			return $this->disabledOPCache;
 		}
@@ -1285,10 +1293,12 @@ namespace WPHookProfiler {
 				return $plugins;
 			} );
 
-			add_action( 'hook_prof_end_html_request', function () {
-				echo "\n<!-- hprof-disable-all-plugins-but:\n";
-				print_r( get_option( 'active_plugins' ) );
-				echo "\n-->\n";
+			add_action( 'hook_prof_end', function () {
+				if ( $this->itIsSafeToAppendHtml() ) {
+					echo "\n<!-- hprof-disable-all-plugins-but:\n";
+					print_r( get_option( 'active_plugins' ) );
+					echo "\n-->\n";
+				}
 			} );
 		}
 
@@ -1422,12 +1432,13 @@ namespace WPHookProfiler {
 					}
 				}
 			} else {
-				if(!function_exists($func)) {
+				try {
+					$rf = new \ReflectionFunction( $func );
+				} catch ( \Exception $e ) {
 					$line = 0;
+
 					return '';
 				}
-
-				$rf = new \ReflectionFunction( $func );
 			}
 
 			$fn   = str_replace( '\\', '/', $rf->getFileName() );

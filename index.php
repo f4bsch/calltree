@@ -1,10 +1,12 @@
 <?php
 /*
 Plugin Name: Calltree
+Plugin URI: https://calltr.ee/
 Description: Advanced Hook and Function Monitor
 Version: 0.1.0
 Author: Fabian Schlieper
 Author URI: https://fabi.me/
+GitHub Plugin URI: f4bsch/calltree
 */
 
 defined( 'ABSPATH' ) or exit;
@@ -36,7 +38,7 @@ class HookProfilerPlugin {
 			$requestGroup = \WPHookProfiler\HookProfiler::getCurrentRequestGroup();
 			\WPHookProfiler\PluginInspector::printHtmlDeps( $requestGroup );
 			//add_action( 'hprof_html_deps', array( 'WPHookProfiler\PluginInspector', 'printHtmlDeps' ) );
-			echo "<script>hprof._imported(document.currentScript.ownerDocument);</script>";
+			echo "<script>hprof._imported(document.currentScript.ownerDocument, true);</script>";
 			exit;
 		}
 
@@ -50,7 +52,6 @@ class HookProfilerPlugin {
 	static function init() {
 		if( defined('HPROF_EXPERIMENTAL') && is_user_logged_in())
 			\WPHookProfiler\Setup::updateMUP();
-
 
 		add_action( 'hook_prof_end', array( 'WPHookProfiler\SystemStats', 'add' ) );
 
