@@ -78,20 +78,20 @@ class ProfileOutputHTML {
 				?>
             </div>
 
-	        <?php
+			<?php
 
-	        $haveProfile = ( count( $profiler->hookFuncMapCalls ) > 0 );
+			$haveProfile = ( count( $profiler->hookFuncMapCalls ) > 0 );
 
-	        if ( ! $haveProfile ) {
-		        echo "<div style='width: auto;      text-align: center;   padding: 5em; color:black;    background: bisque;'>";
-		        $secretCookie = HookProfiler::getSecret( 'cookie' );
-		        echo empty( $_COOKIE[ $secretCookie ] ) ? self::cookieText() : "nothing captured, check profiler settings";
-		        if(!empty(ProfilerSettings::$default->lastDisableAllMsg)) {
-		            echo "<br>Last message: ".ProfilerSettings::$default->lastDisableAllMsg;
-                }
-		        echo "</div>";
-	        }
-	        ?>
+			if ( ! $haveProfile ) {
+				echo "<div style='width: auto;      text-align: center;   padding: 5em; color:black;    background: bisque;'>";
+				$secretCookie = HookProfiler::getSecret( 'cookie' );
+				echo empty( $_COOKIE[ $secretCookie ] ) ? self::cookieText() : "nothing captured, check profiler settings";
+				if ( ! empty( ProfilerSettings::$default->lastDisableAllMsg ) ) {
+					echo "<br>Last message: " . ProfilerSettings::$default->lastDisableAllMsg;
+				}
+				echo "</div>";
+			}
+			?>
 
             <h4 class='hprof-section'>Report</h4>
             <div class="hprof-flex">
@@ -187,7 +187,7 @@ class ProfileOutputHTML {
 					IssueDisplay::listIssues( $issues, $profiler->getWPIncTime(), $profiler->getTotalRunTime() );
 				} catch ( \Exception $e ) {
 					echo "<p>Issue detector exception:" . $e->getMessage() . "</p>";
-					HookProfiler::logMsg("Issue Detector error: ". json_encode($e));
+					HookProfiler::logMsg( "Issue Detector error: " . json_encode( $e ) );
 				}
 				echo "</div>";
 
@@ -223,8 +223,8 @@ class ProfileOutputHTML {
 
 			//print_r(SystemStats::get());
 
-            global $wp_object_cache;
-            print_r($wp_object_cache->non_persistent_groups);
+			global $wp_object_cache;
+			print_r( $wp_object_cache->non_persistent_groups );
 
 			echo "</pre>";
 			?>
@@ -264,8 +264,7 @@ class ProfileOutputHTML {
               href="<?php echo esc_attr( add_query_arg( 'hprof_html_import', 1 ) ); ?>">
 
 
-
-        <link rel="import"  href="<?php echo esc_attr( \HookProfilerPlugin::url( 'components/site-benchmarks.html' ) ); ?>">
+        <!--  -->
 
 		<?php
 
@@ -324,7 +323,7 @@ class ProfileOutputHTML {
                 text-align: center;
             }
 
-            #hook-prof-html p a, #hook-prof-html ul a  {
+            #hook-prof-html p a, #hook-prof-html ul a {
                 text-decoration: underline !important;
             }
 
@@ -1248,7 +1247,7 @@ class ProfileOutputHTML {
 
 		$res = ( $typeAndScale[0] == 'string' )
 			? [ $data, "%s" ] // add zero space to allow line break
-			: [ ($data === '' ? 0 : $data) * $typeAndScale[1], self::$formatting[ $typeAndScale[0] ] ];
+			: [ ( $data === '' ? 0 : $data ) * $typeAndScale[1], self::$formatting[ $typeAndScale[0] ] ];
 
 
 		self::sw()->measure( 'formatByType' );
@@ -1578,28 +1577,40 @@ class ProfileOutputHTML {
 		$secretCookie = HookProfiler::getSecret( 'cookie' );
 		?>
         <div style="text-align: left; max-width: 60em;    margin: auto;">
-        <p>
-            Calltree loaded the Profiler but it did not capture anything yet. The Report you'll find below only includes some general data.
-            Due to high intrusion into the WordPress Plugin API the Profiler is disabled by default.
-            It will only profile with a trigger cookie set. Before using it please consider:
-        </p>
-
-        <ul style="    margin-left: 2em;     list-style: circle;">
-            <li>The profiler in its current state has an overhead of 10 to 40 % (depending on the active plugins), so it can slow down your site.
-                You should interpret any absolute time value with care, as they may be very different without the profiler hooked in. Relative times are reliable though.
-            </li>
-            <li>The profiler completely overrides the Plugin API, and in some rare situations this can cause trouble.
-                To prevent data loss, we built in a trouble detection, that will disable the Profiler if something goes wrong.
-                Some plugins might trigger this protection when they stop script execution at uncommon spots (such as custom AJAX endpoints).
-                You can re-enable profiling in the settings &#x2699;.
-            </li>
-            <li>
-                Please add this bookmarklet to your bookmarks bar: <a style="cursor: move;" class="" onclick="return false;" href='javascript:(document.cookie="hprof_disable=1;path=/")&&document.location.reload();'><span>Disable Profiler</span></a>
-                This will clear the trigger cookie and disable the profiler in case you can't access your Dashboard anymore.
-            </li>
-        </ul>
             <p>
-                <b>After you read the above, <a href='javascript:(document.cookie="<?php echo $secretCookie; ?>=1;path=/")&&document.location.reload();'>click here</a> to set the trigger cookie, enable the Profiler (only for your WordPress Account) and reload the page.</b>
+                Calltree loaded the Profiler but it did not capture anything yet. The Report you'll find below only
+                includes some general data.
+                Due to high intrusion into the WordPress Plugin API the Profiler is disabled by default.
+                It will only profile with a trigger cookie set. Before using it please consider:
+            </p>
+
+            <ul style="    margin-left: 2em;     list-style: circle;">
+                <li>The profiler in its current state has an overhead of 10 to 40 % (depending on the active plugins),
+                    so it can slow down your site.
+                    You should interpret any absolute time value with care, as they may be very different without the
+                    profiler hooked in. Relative times are reliable though.
+                </li>
+                <li>The profiler completely overrides the Plugin API, and in some rare situations this can cause
+                    trouble.
+                    To prevent data loss, we built in a trouble detection, that will disable the Profiler if something
+                    goes wrong.
+                    Some plugins might trigger this protection when they stop script execution at uncommon spots (such
+                    as custom AJAX endpoints).
+                    You can re-enable profiling in the settings &#x2699;.
+                </li>
+                <li>
+                    Please add this bookmarklet to your bookmarks bar: <a style="cursor: move;" class=""
+                                                                          onclick="return false;"
+                                                                          href='javascript:(document.cookie="hprof_disable=1;path=/")&&document.location.reload();'><span>Disable Profiler</span></a>
+                    This will clear the trigger cookie and disable the profiler in case you can't access your Dashboard
+                    anymore.
+                </li>
+            </ul>
+            <p>
+                <b>After you read the above, <a
+                            href='javascript:(document.cookie="<?php echo $secretCookie; ?>=1;path=/")&&document.location.reload();'>click
+                        here</a> to set the trigger cookie, enable the Profiler (only for your WordPress Account) and
+                    reload the page.</b>
             </p>
         </div>
 
