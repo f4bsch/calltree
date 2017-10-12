@@ -26,5 +26,15 @@ class Admin {
 
 			}
 
+	static function footer() {
+		?>
+        <style>
+            #message.error iframe {
+                height: 80vh;
+            }
+        </style>
+		<?php
+	}
+
 }
 
