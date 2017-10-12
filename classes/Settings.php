@@ -6,7 +6,7 @@ class Settings {
 
 	const AJAX_ACTION = 'hprof_settings';
 
-	static function register() {
+	static function registerAjax() {
 		add_action( "wp_ajax_" . self::AJAX_ACTION, array( 'WPHookProfiler\Settings', 'ajax' ) );
 		add_action( "wp_ajax_nopriv_" . self::AJAX_ACTION,  array( 'WPHookProfiler\Settings', 'ajax' ) );
 	}
@@ -160,6 +160,8 @@ class Settings {
             <div class="flex">
                 <div>
                     <p>Coverage</p>
+                    <p class="hprof-experimental"><label><input type="checkbox" name="profileInjected" value="1"> Injected Profiler</label></p>
+
                     <p><label><input type="checkbox" name="profileHooks" value="1"> Profile hooks</label></p>
 
                     <p><label><input type="checkbox" name="profilePluginMainFileInclude" value="1"> Profile plugin main
@@ -242,6 +244,11 @@ class Settings {
 
                     <p><label><input type="checkbox" name="opcacheDisable" value="1">
                             Disable PHP OPCache
+                        </label>
+                    </p>
+
+                    <p><label><input type="checkbox" name="objectCacheFlush" value="1">
+                            Disable Object Cache persistence (if any)
                         </label>
                     </p>
                 </div>

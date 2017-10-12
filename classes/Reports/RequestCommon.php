@@ -3,8 +3,10 @@
 namespace WPHookProfiler\Reports;
 
 
+use Calltree\WallClock;
 use WPHookProfiler\FileStatsCache;
 use WPHookProfiler\HookProfiler;
+use WPHookProfiler\ObjectMethodProfiler;
 use WPHookProfiler\ProfileOutputHTML;
 use WPHookProfiler\ProfilerSettings;
 
@@ -32,7 +34,7 @@ DESC;
 
 		$hookTime         = $profiler->getTotalInHookTime(); //sw()->measure('getTotalInHookTime');
 		$requestTime      = $profiler->getTotalRunTime(); //sw()->measure('getTotalRunTime');
-		$recoveredTime    = $profiler->getTotalRecoverdOutOfStackTime();
+		$recoveredTime    = $profiler->getTotalRecoveredOutOfStackTime();
 		$unclassifiedTime = $profiler->getTotalUnclassifiedOutOfStackTime(); //sw()->measure('getTotalUnclassifiedOutOfStackTime');
 
 		$activePlugins = get_option( 'active_plugins' );
@@ -43,8 +45,9 @@ DESC;
 
 		$opcLv = $profiler->disabledOPCache ? '*OFF' : ( @ini_get( 'opcache.enable' ) ? @ini_get( 'opcache.optimization_level' ) : 'OFF' );
 
-		if(function_exists('opcache_reset') && $profiler->disabledOPCache)
+		if ( function_exists( 'opcache_reset' ) && $profiler->disabledOPCache ) {
 			opcache_reset();
+		}
 
 		$requestRows = [
 			'request group'  => $profiler->getCurrentRequestGroup(),
@@ -78,11 +81,11 @@ DESC;
 			$opcacheMemTotal = $opcMem['free_memory'] + $opcMem['used_memory'];
 			$opcacheMemUsage = $opcMem['used_memory'] / $opcacheMemTotal;
 
-			$opcKeys         =  $opcStats["num_cached_keys"]; // $opcStats["num_cached_scripts"] +
+			$opcKeys         = $opcStats["num_cached_keys"]; // $opcStats["num_cached_scripts"] +
 			$opcacheKeyUsage = $opcKeys / $opcStats["max_cached_keys"];
 
-			$requestRows['opcache_mem'] = [ round($opcacheMemUsage * 100), "%7.0f %%" ];
-			$requestRows['opcache_files'] = [ round($opcacheKeyUsage * 100), "%7.0f %%" ];
+			$requestRows['opcache_mem']   = [ round( $opcacheMemUsage * 100 ), "%7.0f %%" ];
+			$requestRows['opcache_files'] = [ round( $opcacheKeyUsage * 100 ), "%7.0f %%" ];
 		}
 
 
@@ -95,6 +98,15 @@ DESC;
 				$hits / ( $hits + $misses ) * 100,
 				"%7.1f %%"
 			];
+
+			if(/*wp_using_ext_object_cache() &&*/ $GLOBALS['wp_object_cache']) {
+				$woc = $GLOBALS['wp_object_cache'];
+				$woc = ($woc instanceof ObjectMethodProfiler) ? $woc->getWrappedObject_() : $woc;
+				$requestRows['objCache'] =	get_class($woc);
+			}
+
+
+			$requestRows['cache keys'] = [ count( $profiler->cacheKeyMapGets ), "%7d" ];
 		}
 
 		$requestRows['T_wpIncludes'] = [ $profiler->getWPIncTime(), "%7.2f ms" ];
@@ -106,7 +118,8 @@ DESC;
 			'T_unclassified' => [ $unclassifiedTime, "%7.2f ms" ],
 			//'T_request - T_hooks'             => [ $requestTime - $hookTime, "%6.2f ms" ],
 			//'T_hooks / T_request'             => [ $hookTime / $requestTime * 100, "%6.1f %%" ],
-			'coverage'       => [ ( $hookTime + $recoveredTime ) / $requestTime * 100, "%7.1f %%" ]
+			'coverage'       => [ ( $hookTime + $recoveredTime ) / $requestTime * 100, "%7.1f %%" ],
+			'T_clockOffset'        => [ WallClock::getOffset() * 1000, "%7.2f ms" ],
 			//''                           => [ , "%7.2f ms" ],
 		];
 
