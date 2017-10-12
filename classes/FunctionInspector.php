@@ -7,6 +7,11 @@ class FunctionInspector {
 	public static $locationMapEditLink = array();
 
 	public static function getEditLink( $location ) {
+
+		if(strncmp($location, ABSPATH, strlen(ABSPATH)) !== 0) {
+			$location = ABSPATH.$location;
+		}
+
 		if ( isset( self::$locationMapEditLink[ $location ] ) ) {
 			return self::$locationMapEditLink[ $location ];
 		}
@@ -32,7 +37,7 @@ class FunctionInspector {
 			$lineHeight = 17.35;
 			$scrollto   = round( $line * $lineHeight );
 
-			$url = $adminUrl . "?file=$file&plugin=$plugin&a=te&scrollto=$scrollto";
+			$url = $adminUrl . "?file=$file&plugin=$plugin&scrollto=$scrollto";
 			self::$locationMapEditLink[ $location ] = $url;
 
 			return $url;

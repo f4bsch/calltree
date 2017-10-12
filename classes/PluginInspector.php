@@ -86,12 +86,7 @@ class PluginInspector {
 
             <!---->
         </div>
-
-
-
-
             <div id="hprof-bench-out" style="float: right;">---</div>
-
             <svg id="prof-chart" style="width: calc(95vw - 4em); height: calc(92vmin - 12em);">
             </svg>
 
@@ -240,7 +235,8 @@ class PluginInspector {
                         let urlExclusive = url + "hprof-disable-all-plugins-but=" + curPlugin;
 
                         startBench([urlAllDisable, urlExclusive], ['NO plugins', 'only ' + curPlugin], [hashNone, curHashes['hash-only']]);
-                    }
+                    },
+
                 };
 
                 const startBench = function (urls, labels, hashes) {
@@ -265,7 +261,7 @@ class PluginInspector {
                     const resPerUrl = new Array(2);
                     bench.setProgressCallback(function (p) {
                         resPerUrl[p.urlIndex] = p;
-                        if (p.urlIndex === 1) {
+                        if (p.isLastUrl) {
                             let y = [resPerUrl[0].server.med, resPerUrl[1].server.med];
                             let ym = [resPerUrl[0].server.med, resPerUrl[1].server.med];
                             plot.appendVal(y, ym);

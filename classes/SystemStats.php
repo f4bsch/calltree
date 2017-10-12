@@ -81,6 +81,10 @@ class SystemStats {
 
 	public static function getWpIncTimeMedian( &$outSamples = null ) {
 		$stats      = self::get();
+		if(!is_object($stats)) {
+			$outSamples = -1;
+			return -1;
+		}
 		$outSamples = count( $stats->wpIncTimes );
 
 		return Stopwatch::median( $stats->wpIncTimes );

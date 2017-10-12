@@ -171,6 +171,10 @@ class ProfileOutputHTML {
 					if ( ProfilerSettings::$default->profileIncludes ) {
 						Reports\Includes::render( $groupedTimes );
 					}
+
+					// TODO
+					//$profiler->profileAsyncHttp();
+					//$profiler->profileWPCron();
 				} // have profile
 
 				?>
@@ -223,8 +227,9 @@ class ProfileOutputHTML {
 
 			//print_r(SystemStats::get());
 
-			global $wp_object_cache;
-			print_r( $wp_object_cache->non_persistent_groups );
+			//global $wp_object_cache;
+			//if(isset($wp_object_cache->non_persistent_groups))
+			//    print_r( $wp_object_cache->non_persistent_groups );
 
 			echo "</pre>";
 			?>
@@ -420,8 +425,12 @@ class ProfileOutputHTML {
                 background: none;
             }
 
-            #hook-prof-html .hprof-table-wrap table tr:hover {
-                /* background: white; */
+            #hook-prof-html .hprof-table-wrap table tbody tr:hover:nth-child(even) {
+                background: lightyellow;
+            }
+
+            #hook-prof-html .hprof-table-wrap table tbody tr:hover:nth-child(odd) {
+                background: lightgoldenrodyellow;
             }
 
             /*#hook-prof-html table tr:nth-child(odd) {background: #FFF} */
@@ -668,17 +677,18 @@ class ProfileOutputHTML {
                 t.children('thead').prepend(inputRow);
 
 
-                t = t.DataTable(dt = {
+                let dt = t.DataTable({
                     paging: !!pages,
                     pageLength: 25,
                     aoColumns: hprofDtColTypes[key],
                     //dom: '<"top"iflp>rt<"bottom"><"clear">'
                 });
-                console.log(dt);
+
+                t.parent().children('.dataTables_length').append(t.parent().children('.dataTables_paginate'));
 
 
                 // Apply the search
-                t.columns().every(function (i) {
+                dt.columns().every(function (i) {
                     let that = this;
                     jQuery('input', searchCells[i]).on('keyup change', function () {
                         if (that.search() !== this.value) {
@@ -737,7 +747,7 @@ class ProfileOutputHTML {
                         //outDiv.style.position = footerStyle.position;
                         outDiv.style.marginLeft = left + "px";
                         outDiv.style.width = "calc(98vw - " + left + "px)";
-                        console.log('outDiv.style.width', (window.innerWidth * 0.98 - left));
+                        // console.log('outDiv.style.width', (window.innerWidth * 0.98 - left));
                     } else {
                         outDiv.style.width = "calc(98vw - 2em)";
                     }
@@ -1016,27 +1026,33 @@ class ProfileOutputHTML {
 	}
 
 	static function maybeAddActionLink( $from, $type ) {
+		if ( ! $from ) {
+			return $from;
+		}
+
 		$from0sp = self::add0Sp( $from );
 		if ( $type === 'func' ) {
 			$plug = self::$profiler->getPluginByFunction( $from );
-			self::sw()->measure( 'maybeAddActionLink/getPluginByFunction' );
+			//self::sw()->measure( 'maybeAddActionLink/getPluginByFunction' );
 			if ( strncmp( $plug, 'plugin/', 7 ) === 0 ) {
 				$funcLoc = self::getFuncLocation( $from );
-				self::sw()->measure( 'maybeAddActionLink/func/plug/funcLoc' );
+				//self::sw()->measure( 'maybeAddActionLink/func/plug/funcLoc' );
 				$to = '<a data-k="' . esc_attr( $from ) . '" href="' . FunctionInspector::getEditLink( $funcLoc ) . '">' . self::add0Sp( HookProfiler::rmTag( $from ) ) . '</a>';
-				self::sw()->measure( 'maybeAddActionLink/func/plug' );
+				//self::sw()->measure( 'maybeAddActionLink/func/plug' );
 			} else {
 				$to = '<a data-k="' . esc_attr( $from ) . '" href="" onclick="return false">' . self::add0Sp( HookProfiler::rmTag( $from ) ) . '</a>';
-				self::sw()->measure( 'maybeAddActionLink/func/noplug' );
+				//self::sw()->measure( 'maybeAddActionLink/func/noplug' );
 			}
 		} elseif ( $type === 'component' ) {
 			if ( strncmp( $from, 'plugin/', 7 ) === 0 ) {
 				$to = '<a data-k="' . esc_attr( $from ) . '" href="' . PluginInspector::getInspectionLink( $from ) . '">' . $from0sp . '</a>';
-				self::sw()->measure( 'maybeAddActionLink/getPluginInstpectLink' . $from );
+				//self::sw()->measure( 'maybeAddActionLink/getPluginInstpectLink' . $from );
 			} else {
 				$to = '<a data-k="' . esc_attr( $from ) . '" href="" onclick="return false">' . $from0sp . '</a>';
 			}
-		} elseif ( $type === 'file' || $type === 'hook' ) {
+		} elseif ( $type === 'file') {
+			$to = '<a data-k="' . esc_attr( $from ) . '" href="' . FunctionInspector::getEditLink( $from .':0' ) . '">' . $from0sp . '</a>';
+        } elseif( $type === 'hook' ) {
 			$to = $from0sp;
 		} else {
 			$to = $from;
@@ -1121,7 +1137,7 @@ class ProfileOutputHTML {
 			for ( $i = 0; $i < $nRows; $i ++ ) {
 				$rowKey                                 = $rowKeys[ $i ];
 				$k                                      = $keyFilter ? call_user_func( $keyFilter, $rowKey ) : $rowKey;
-				$d                                      = isset( $data[ $colName ][ $k ] ) ? $data[ $colName ][ $k ] : '';
+				$d                                      = isset( $data[ $colName ][ $k ] ) ? $data[ $colName ][ $k ] : null;
 				$rows[ $keyRemap[ $rowKey ] ][ $j - 1 ] = self::formatByType( self::maybeAddActionLink( $d, $colName ), $ts );
 			}
 
@@ -1171,6 +1187,7 @@ class ProfileOutputHTML {
 
 		$guesses = [
 			'mem_'    => 'mem',
+			'_mem'    => 'mem',
 			'memory'  => 'mem',
 			'count'   => 'count',
 			'time'    => 'time',
@@ -1181,6 +1198,8 @@ class ProfileOutputHTML {
 			'fires'   => 'count',
 			'queries' => 'count',
 			'cnt'     => 'count',
+			'num_'     => 'count',
+            'able' => 'bool',
 		];
 
 
@@ -1218,6 +1237,9 @@ class ProfileOutputHTML {
 				$type  = 'size';
 				$scale = 1 / 1024;
 				break;
+            case 'bool':
+                $type = 'bool';
+                break;
 		}
 
 		return [ $type, $scale ];
@@ -1230,7 +1252,8 @@ class ProfileOutputHTML {
 		'time_us' => "%7.2f &mu;s",
 		'time_ns' => "%7.2f <span style='font-weight: lighter;'>ns</span>",
 		'size'    => "%7.0f KiB",
-		'count'   => '%6d'
+		'count'   => '%6d',
+        'bool'   => '%6d',
 	);
 
 
@@ -1245,9 +1268,19 @@ class ProfileOutputHTML {
 
 	static function formatByType( $data, $typeAndScale ) {
 
+	    if(is_array($data))
+	        return implode(', ', $data); //json_encode($data);
+
+	    if(is_bool($data)) {
+	        return $data ? 'Y' : 'N';
+        }
+
 		$res = ( $typeAndScale[0] == 'string' )
 			? [ $data, "%s" ] // add zero space to allow line break
-			: [ ( $data === '' ? 0 : $data ) * $typeAndScale[1], self::$formatting[ $typeAndScale[0] ] ];
+			: ( ( ! $data && $data !== 0 && ($typeAndScale[0] !== 'count') ) ? '-1' : [
+				$data * $typeAndScale[1],
+				self::$formatting[ $typeAndScale[0] ]
+			] );
 
 
 		self::sw()->measure( 'formatByType' );

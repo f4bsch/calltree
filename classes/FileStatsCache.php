@@ -3,14 +3,11 @@
 
 namespace WPHookProfiler;
 
-//use SebastianBergmann\PHPLOC\Analyser;
-
-//require_once \HookProfilerPlugin::$path . '/vendor/autoload.php';
 
 class FileStatsCache {
 
 	static function _getSizes__( $fileNames ) {
-		$cache = Cache::get()->get('hook_prof_file_sizes');
+		$cache = Cache::get()->get( 'hook_prof_file_sizes' );
 
 
 		$miss = false;
@@ -37,7 +34,7 @@ class FileStatsCache {
 				}
 			}
 
-			Cache::get()->put('hook_prof_file_sizes', $cache);
+			Cache::get()->put( 'hook_prof_file_sizes', $cache );
 		}
 
 
@@ -51,9 +48,13 @@ class FileStatsCache {
 
 	private static $cache = null;
 
+	static function packPath( $path ) {
+		return Cache::binHash( str_replace( ABSPATH, '@', realpath($path) ) );
+	}
+
 	static function getSizes( $fileNames ) {
 		if ( ! self::$cache ) {
-			self::$cache = Cache::get()->get('hook_prof_file_sizes');
+			self::$cache = Cache::get()->get( 'hook_prof_file_sizes' );
 			if ( ! is_array( self::$cache ) ) {
 				self::$cache = array();
 			}
@@ -63,31 +64,25 @@ class FileStatsCache {
 
 		// check if we have at least one cache miss
 		foreach ( $fileNames as $fn ) {
-			if ( ! isset( self::$cache[ $fn ] ) ) {
-				self::$cache[ $fn ] = filesize( $fn );
-				$miss               = true;
+			$fnp = self::packPath( $fn );
+			if ( ! isset( self::$cache[ $fnp ] ) ) {
+				self::$cache[ $fnp ] = filesize( $fn );
+				$miss                = true;
 			}
 		}
 
+
 		if ( $miss ) {
-			Cache::get()->put('hook_prof_file_sizes', self::$cache);
+			Cache::get()->put( 'hook_prof_file_sizes', self::$cache );
 		}
 
 		$sizes = array();
 		foreach ( $fileNames as $k => $fn ) {
-			$sizes[ $k ] = self::$cache[ $fn ];
+			$fnp         = self::packPath( $fn );
+			$sizes[ $k ] = self::$cache[ $fnp ];
 		}
 
 		return $sizes;
 	}
 
-	/*
-	static function getLloc( $filename ) {
-		$analyser = new \SebastianBergmann\PHPLOC\Analyser();
-		$data     = $analyser->countFiles( [ $filename ], false );
-
-		return $data['lloc'];
 	}
-	*/
-
-}

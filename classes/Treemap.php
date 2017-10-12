@@ -60,13 +60,12 @@ class Treemap {
 		$data2 = array();
 
 
-        $mem = count($profiler->hookFuncMapMemSelf) > 0 && $profiler->profileMem;
+		$mem = count( $profiler->hookFuncMapMemSelf ) > 0 && $profiler->profileMem;
 
 		$hookFuncMapTime = $profiler->hookFuncMapFuncTimeSelf;
 		arsort( $hookFuncMapTime, SORT_NUMERIC );
 
 		$compMapFuncCount = array();
-
 
 
 		foreach ( $hookFuncMapTime as $hookFunc => $timeSelf ) {
@@ -92,7 +91,7 @@ class Treemap {
 
 			if ( isset( $data2[ $key ] ) ) {
 				$data2[ $key ]['value'] += $profiler->hookFuncMapFuncTimeSelf[ $hookFunc ];
-				$data2[ $key ]['mem']   += ($mem && isset($profiler->hookFuncMapMemSelf[ $hookFunc ])) ? $profiler->hookFuncMapMemSelf[ $hookFunc ] : 0;
+				$data2[ $key ]['mem']   += ( $mem && isset( $profiler->hookFuncMapMemSelf[ $hookFunc ] ) ) ? $profiler->hookFuncMapMemSelf[ $hookFunc ] : 0;
 			} else {
 				$data2[ $key ] = [
 					'key'       => $key,
@@ -100,7 +99,7 @@ class Treemap {
 					'region'    => $compGroup,
 					'subregion' => $compName,
 					'value'     => $profiler->hookFuncMapFuncTimeSelf[ $hookFunc ],
-					'mem'       => ($mem && isset($profiler->hookFuncMapMemSelf[$hookFunc ])) ? $profiler->hookFuncMapMemSelf[$hookFunc ] : 0
+					'mem'       => ( $mem && isset( $profiler->hookFuncMapMemSelf[ $hookFunc ] ) ) ? $profiler->hookFuncMapMemSelf[ $hookFunc ] : 0
 				];
 			}
 
@@ -116,7 +115,7 @@ class Treemap {
 		// this measures most of WP includes
 		self::add( $data2, 'wpcore/load/includes', ( $profiler->tStart - $profiler->timestart ) * 1000 );
 
-		if(isset($profiler->hookMapLastCallEndTime['muplugins_loaded'])) {
+		if ( isset( $profiler->hookMapLastCallEndTime['muplugins_loaded'] ) ) {
 			$muplugTime = $profiler->hookMapLastCallEndTime['muplugins_loaded'] - ( ( $profiler->tStart - $profiler->requestTime ) * 1000 );
 			//echo "muplug $muplugTime " . $profiler->hookMapLastCallEndTime['muplugins_loaded'] . " ".(($profiler->tStart - $profiler->requestTime));
 			self::add( $data2, 'wpcore/load/muplugins', $muplugTime );
@@ -210,7 +209,7 @@ class Treemap {
 
             hprof.loadD3(3);
             document.addEventListener('hook-prof-html-ready', function () {
-                const d3 = d3v3;
+                const d3 = window.d3v3;
 
                 const elWidth = document.getElementById('hprof-treemap2').clientWidth;
                 const elHeight = document.getElementById('hprof-treemap2').clientHeight;
@@ -283,7 +282,7 @@ class Treemap {
                     initialize(root);
                     accumulate(root);
                     layout(root);
-                   // console.log(root);
+                    // console.log(root);
                     display(root);
 
                     /*
@@ -507,15 +506,18 @@ class Treemap {
                 }
 
 
+                let data = [];
                 //noinspection JSAnnotator
-                const data = <?php echo json_encode( array_values( $data2 ) ); ?>;
+                data = <?php echo json_encode( array_values( $data2 ) ); ?>;
 
-                var sum = 0;
+                let sum = 0;
                 data.forEach((d) => sum += d.value);
-                data.forEach((d) => d.value = d.value * 100 / sum);
-                console.log('treemap coverage is ', sum);
+                data.forEach((d) => {
+                                        d.value = d.value * 100 / sum;
+                });
+                console.log('treemap coverage is ', sum, 'ms');
 
-                var ndata = d3.nest().key(function (d) {
+                const ndata = d3.nest().key(function (d) {
                     return d.region;
                 }).key(function (d) {
                     return d.subregion;

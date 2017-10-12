@@ -18,7 +18,7 @@ class IssueDetector {
 		// 145 no opcache
 
 		$med = SystemStats::getWpIncTimeMedian( $nSamples );
-		if ( $nSamples < 100 ) {
+		if ( $nSamples < 100 || $med <= 0 ) {
 			return - 1;
 		}
 
@@ -463,7 +463,7 @@ WC_Helper_Updater::transient_update_plugins	pre_set_site_transient_update_plugin
 
 		if(function_exists('opcache_get_status')) {
 			$opcacheStatus = opcache_get_status( false );
-			if ( $opcacheStatus['cache_full'] || $opcacheStatus['memory_usage']['free_memory'] < 1024 * 512 ) {
+			if ( !empty($opcacheStatus['cache_full']) || (isset($opcacheStatus['memory_usage']['free_memory']) && $opcacheStatus['memory_usage']['free_memory'] < 1024 * 512) ) {
 				$issue = new Issue( "server", "performance", Issue::CategoryMisc );
 				$issue->setDescription( sprintf( __( 'OPCache is full or almost full. This may cause spikes in server response time.', 'hook-prof' ) ) );
 				$issue->setHowToSolve( sprintf( __( 'Increase OPCache memory' ) ) );
