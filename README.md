@@ -30,6 +30,7 @@ The profiler covers:
 ```bash
 cd wp-content/plugins
 git clone https://github.com/f4bsch/calltree
+cd calltree
 composer require
 node install
 
