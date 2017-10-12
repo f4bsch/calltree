@@ -22,9 +22,20 @@ namespace WPHookProfiler {
 	use Calltree\ScopedCapturer;
 
 	function main_mu() {
-		/** @noinspection PhpIncludeInspection */
-		require_once dirname( dirname( __FILE__ ) ) . '/autoload.php';
-		require_once dirname( dirname( __FILE__ ) ) . '/Calltree/WallClock.php'; // TODO for some reasone autoload does not work!
+		$pDir = dirname( dirname( __FILE__ ) );
+		// TODO fix autoload from MU!
+		if ( is_file( $pDir . '/Calltree/WallClock.php' ) ) {
+			// sym-linked MUP
+			/** @noinspection PhpIncludeInspection */
+			require_once $pDir . '/autoload.php';
+			require_once $pDir . '/Calltree/WallClock.php';
+		} else {
+			// copied MUP
+			/** @noinspection PhpIncludeInspection */
+			require_once WP_PLUGIN_DIR . '/calltree/autoload.php';
+			/** @noinspection PhpIncludeInspection */
+			require_once WP_PLUGIN_DIR . '/calltree/Calltree/WallClock.php';
+		}
 
 		ProfilerSettings::loadDefault();
 
@@ -469,7 +480,7 @@ namespace WPHookProfiler {
 
 						global $current_user;
 						$uid = $current_user ? $current_user->ID : 0;
-						$s = 'script';
+						$s   = 'script';
 						echo "\n<$s>  window. WP_USER_ID = {$uid}; window. HPROF_SERVER_TTLB = {$t}; window. HPROF_SERVER_TIME = {$now};</$s>";
 						exit; // we force an exit here, sorry
 					} );
@@ -1136,7 +1147,7 @@ namespace WPHookProfiler {
 		 *
 		 */
 		function loadPluginMainProfiled( $__plugin ) {
-			$_t = microtime(true);
+			$_t = microtime( true );
 
 			wp_register_plugin_realpath( $__plugin );
 
@@ -1848,11 +1859,11 @@ namespace WPHookProfiler {
 				'found_posts' => '|found_posts', // can happen multiple times, catch the first!
 				'posts_cache' => '|pre_handle_404',
 
-				'wp_pre'               => '|wp',
-				'wp'                   => 'wp|',
+				'wp_pre'                => '|wp',
+				'wp'                    => 'wp|',
 				// wp
 				'template_redirect_pre' => $forAdmin ? null : '|template_redirect',
-				'template_redirect'    => $forAdmin ? null : 'template_redirect|',
+				'template_redirect'     => $forAdmin ? null : 'template_redirect|',
 
 				'wp_head_before' => $forAdmin ? null : '|wp_head',// single
 
@@ -2387,7 +2398,7 @@ namespace WPHookProfiler {
 				}
 			}
 
-			$now = microtime(true);
+			$now = microtime( true );
 
 						self::$profiler->postHookCallbacksCall( $this->tag, $now, $hookSeq, $hookStartTime );
 

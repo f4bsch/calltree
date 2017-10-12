@@ -20,17 +20,18 @@ class HookProfilerPlugin {
 
 	static function main() {
 		self::$path = dirname( __FILE__ ) . '/';
-		spl_autoload_register( array( 'HookProfilerPlugin', 'autoload' ) );
+		require_once self::$path . 'autoload.php';
 
 		register_activation_hook( __FILE__, array( 'WPHookProfiler\Setup', 'onPluginActivation' ) );
 		register_deactivation_hook( __FILE__, array( 'WPHookProfiler\Setup', 'onPluginDeactivation' ) );
 
-		if ( ! defined( 'HOOK_PROFILER_MU' ) && !WPHookProfiler\Setup::updateMUP() ) {
+		if ( ! defined( 'HOOK_PROFILER_MU' ) && ! WPHookProfiler\Setup::updateMUP() ) {
 			add_action( 'admin_notices', array( 'WPHookProfiler\Admin', 'noticeMissingMUP' ) );
 		}
 
 
 		add_action( 'init', array( __CLASS__, 'init' ) );
+		add_action( 'admin_footer', array( 'WPHookProfiler\Admin', 'footer' ) );
 
 		if ( ! empty( $_GET['hprof_html_import'] ) ) {
 			// TODO caching headers
@@ -50,14 +51,16 @@ class HookProfilerPlugin {
 	}
 
 	static function init() {
-		if( defined('HPROF_EXPERIMENTAL') && is_user_logged_in())
+		if ( defined( 'HPROF_EXPERIMENTAL' ) && is_user_logged_in() ) {
 			\WPHookProfiler\Setup::updateMUP();
+		}
 
 		add_action( 'hook_prof_end', array( 'WPHookProfiler\SystemStats', 'add' ) );
 
-		if ( self::curUserCanProfile($demo)) {
-			if($demo)
+		if ( self::curUserCanProfile( $demo ) ) {
+			if ( $demo ) {
 				add_filter( 'show_admin_bar', '__return_true' );
+			}
 
 			// we now set this with JS
 			/*
@@ -78,31 +81,24 @@ class HookProfilerPlugin {
 
 			add_action( 'admin_bar_menu', array( 'WPHookProfiler\Admin', 'barMenu' ), 1e9 );
 
-			add_action('wp_ajax_hprofGetPostUrls', array( 'WPHookProfiler\SiteBenchmarks', 'ajaxGetPostUrls' ) );
+			add_action( 'wp_ajax_hprofGetPostUrls', array( 'WPHookProfiler\SiteBenchmarks', 'ajaxGetPostUrls' ) );
 
-			WPHookProfiler\Settings::register();
-		}
-	}
-
-	static function autoload( $class ) {
-		$len = 15; //strlen("WPHookProfiler\\");
-		if ( strncmp( "WPHookProfiler\\", $class, $len ) === 0 ) {
-			if ( $class === "WPHookProfiler\\ProfilerSettings" ) {
-				echo "Please re-install the MU plugin!";
-				debug_print_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
-				exit;
+			if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+				WPHookProfiler\Settings::registerAjax();
+				add_action( "wp_ajax_hprof_fix", array( 'WPHookProfiler\PluginFixer', 'ajax' ) );
 			}
-			require_once self::$path . "classes/" . str_replace('\\','/',substr( $class, $len )) . ".php";
 		}
 	}
 
-	static function url( $sub='' ) {
+
+	static function url( $sub = '' ) {
 		return plugin_dir_url( __FILE__ ) . '/' . $sub;
 	}
 
-	static function curUserCanProfile(&$demo = null) {
-		$demo =( defined( 'HPROF_ALWAYS_ENABLE' ) && HPROF_ALWAYS_ENABLE );
-		return $demo || current_user_can( 'activate_plugins' );
+	static function curUserCanProfile( &$demo = null ) {
+		$demo = ( defined( 'HPROF_ALWAYS_ENABLE' ) && HPROF_ALWAYS_ENABLE );
+
+		return $demo || ( defined( 'HPROF_HAVE_SECRET_COOKIE' ) && HPROF_HAVE_SECRET_COOKIE ) || current_user_can( 'activate_plugins' );
 	}
 }
 

@@ -30,6 +30,7 @@ class WallClock {
 		self::$offset          -= $timeSpanFrozen;
 		self::$timeStampFrozen = 0.0;
 
+		// try to remove self overhead
 		$t2                     = microtime( true );
 		self::$offset -= ($t2 - $t)*3;
 
