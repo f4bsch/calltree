@@ -4,7 +4,7 @@ Calltree is a WordPress plugin that profiles your site's performance and creates
 ![Time Map](https://calltr.ee/wp-content/uploads/2017/09/time-map-1.png?v=2)
 
 # A WordPress performance analysis tool
-Calltree focuses on the time the server needs to generate the complete response (for normal page requests that's HTML, for REST&AJAX its JSON). You can call it server response time too. It can find common issues concerning PHP settings, the WordPress Object Cache, the Database and Plugins. By hooking deeply into the WordPress Plugin API, it captures hooks and function calls.
+Calltree focuses on the time the server needs to generate the complete response (for normal page requests it is HTML, for REST/AJAX its JSON). Also know as server response time. Calltree can find common issues concerning PHP settings, the WordPress Object Cache, the Database and Plugins. By hooking deeply into the WordPress Plugin API, it captures hooks and function calls.
 
 
 # For site admins
@@ -26,9 +26,18 @@ The profiler covers:
 * Script handling
 * Actions or filters your plugin hooks into
 
+# Installation from Source
+```bash
+cd wp-content/plugins
+git clone https://github.com/f4bsch/calltree
+composer require
+node install
 
+```
+ 
+Then enable Calltree in the Plugins admin screen. You'll find a new entry in the Toolbar and the report below the footer of each page.
 
-# Todo: Not yet implemented coverage/features
+# TODO: Not yet implemented coverage/features
 * Memory
 * Object Cache I/O
 * Database queries
