@@ -29,9 +29,8 @@ The profiler covers:
 # Installation from Source
 ```bash
 cd wp-content/plugins
-git clone https://github.com/f4bsch/calltree
-cd calltree
-node install
+git clone https://github.com/f4bsch/calltree && cd calltree
+npm install
 
 ```
  
