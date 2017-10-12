@@ -30,12 +30,12 @@ The profiler covers:
 ```bash
 cd wp-content/plugins
 git clone https://github.com/f4bsch/calltree
-composer require
+cd calltree
 node install
 
 ```
  
-Then enable Calltree in the Plugins admin screen. You'll find a new entry in the Toolbar and the report below the footer of each page.
+Then enable Calltree at the Plugins admin screen. You'll find a new entry in the Toolbar and the report below the footer of each page.
 
 # TODO: Not yet implemented coverage/features
 * Memory
